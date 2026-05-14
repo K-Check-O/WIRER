@@ -92,7 +92,7 @@ export default function Home() {
           return;
         }
 
-        if (data && data.text && data.sender) {
+        if (data && data.text !== undefined && data.sender !== undefined) { // textとsenderが存在することを確認
           const newMsg: WireMessage = {
             key: key,
             text: data.text,
@@ -107,7 +107,7 @@ export default function Home() {
               // 既存メッセージの更新（例: 削除フラグの変更）
               const updated = [...prev];
               updated[existingIndex] = newMsg;
-              return updated;
+              return updated.sort((a, b) => a.timestamp - b.timestamp); // 更新後もソートを維持
             }
             // 新規メッセージの追加
             return [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
@@ -173,12 +173,37 @@ export default function Home() {
     initAnonymousIdentity();
   };
 
-  // 🗑️ メッセージの削除（論理削除）
+  // 🗑️ 個別メッセージの削除（論理削除）
   const handleDeleteMessage = (messageKey: string) => {
     if (!gunRef.current) return;
     if (window.confirm('このシグナルを削除しますか？（他のユーザーからも見えなくなります）')) {
       // `deleted: true` を書き込むことで論理削除を表現し、全ピアに同期させる
       gunRef.current.get('wirer-proto-local-hub').get('chat').get(messageKey).put({ deleted: true });
+    }
+  };
+
+  // 🗑️ メッセージ選択のトグル
+  const toggleMessageSelection = (messageKey: string) => {
+    setSelectedMessageKeys(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(messageKey)) {
+        newSelection.delete(messageKey);
+      } else {
+        newSelection.add(messageKey);
+      }
+      return newSelection;
+    });
+  };
+
+  // 🗑️ 選択されたメッセージの一括削除
+  const handleBulkDelete = () => {
+    if (!gunRef.current || selectedMessageKeys.size === 0) return;
+    if (window.confirm(`${selectedMessageKeys.size}個のシグナルを削除しますか？（この操作は取り消せません）`)) {
+      selectedMessageKeys.forEach(key => {
+        gunRef.current.get('wirer-proto-local-hub').get('chat').get(key).put({ deleted: true });
+      });
+      setSelectedMessageKeys(new Set()); // 選択をクリア
+      setIsDeleteMode(false); // 削除モードを終了
     }
   };
 
