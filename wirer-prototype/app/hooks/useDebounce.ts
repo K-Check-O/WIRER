@@ -1,24 +1,19 @@
-import { useEffect, useState } from 'react';
+'use client';
 
-/**
- * 連続する高頻度のイベント（タイピングなど）を間引き、
- * 指定された時間が経過した後に最後の値のみを確定させるカスタムフック。
- * WIRERの「スタ連対策」および「Wasm負荷軽減」の防壁として機能します。
- */
+import { useState, useEffect } from 'react';
+
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
   useEffect(() => {
-    // 指定されたミリ秒（delay）後に値を更新するタイマーをセット
+    // delayミリ秒後にvalueでdebouncedValueを更新するタイマーを設定
     const handler = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
 
-    // 次の文字が打たれたら、前のタイマーをキャンセル（絶縁）する
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
+    // 次のeffectが実行される前、またはアンマウント時にタイマーをクリア
+    return () => clearTimeout(handler);
+  }, [value, delay]); // valueかdelayが変わった時だけeffectを再実行
 
   return debouncedValue;
 }
