@@ -18,6 +18,21 @@ export default function Home() {
   const [integrity, setIntegrity] = useState<number | null>(null);
   const [messages, setMessages] = useState<WireMessage[]>([]);
   const gunRef = useRef<any>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+
+  const handleScroll = () => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 50;
+    }
+  };
+
+  useEffect(() => {
+    if (isNearBottomRef.current && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   // 🔑 擬態ログイン用の状態
   const [myWireId, setMyWireId] = useState<string>('');
@@ -58,7 +73,7 @@ export default function Home() {
       const array = new Uint8Array(4);
       window.crypto.getRandomValues(array);
       const hex = Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-      sessionId = `GUEST-${hex}`;
+      sessionId = `GUEST-${hex.slice(0, 4)}-${hex.slice(4, 8)}`;
       sessionStorage.setItem('wirer_anonymous_id', sessionId);
     }
     setMyWireId(sessionId);
@@ -281,7 +296,11 @@ export default function Home() {
         </div>
 
         {/* 受信メッセージの表示エリア */}
-        <div className="border border-zinc-800 p-4 h-52 overflow-y-auto space-y-3 bg-zinc-900/10">
+        <div 
+          ref={messagesContainerRef}
+          onScroll={handleScroll}
+          className="border border-zinc-800 p-4 h-52 overflow-y-auto space-y-3 bg-zinc-900/10"
+        >
           <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-1">Incoming Wires</p>
           {messages.map((msg) => (
             <div key={msg.key} className="text-sm p-2 border-l border-zinc-700 bg-zinc-900/30 group relative">
