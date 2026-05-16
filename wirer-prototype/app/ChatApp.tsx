@@ -75,13 +75,13 @@ const LinkPreview = ({ url }: { url: string }) => {
 const formatMessageText = (text: string, isPreview: boolean = false) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
-  
+
   return parts.map((part, index) => {
     if (part.match(urlRegex)) {
       try {
         const url = new URL(part);
         const displayDomain = url.hostname.replace(/^www\./, '');
-        
+
         if (isPreview) {
           return <span key={index} className="text-accent underline pointer-events-none">[{displayDomain}]</span>;
         }
@@ -114,12 +114,12 @@ const formatMessageText = (text: string, isPreview: boolean = false) => {
           const height = spMatch[1] === 'track' ? "152" : "352";
           embedElement = (
             <div className="mt-2 w-full max-w-[400px] border border-border-color bg-app-bg">
-              <iframe 
-                src={`https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}?theme=0`} 
-                width="100%" 
-                height={height} 
-                frameBorder="0" 
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+              <iframe
+                src={`https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}?theme=0`}
+                width="100%"
+                height={height}
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 loading="lazy"
               ></iframe>
             </div>
@@ -176,9 +176,9 @@ const formatMessageText = (text: string, isPreview: boolean = false) => {
 
         return (
           <span key={index}>
-            <a 
-              href={part} 
-              target="_blank" 
+            <a
+              href={part}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-accent underline hover:brightness-125 transition-all"
               title={part}
@@ -196,15 +196,15 @@ const formatMessageText = (text: string, isPreview: boolean = false) => {
   });
 };
 
-const MessageItem = memo(({ 
-  msg, 
-  myWireId, 
-  isExpanded, 
-  replyLineClamp, 
-  toggleReplyExpansion, 
-  scrollToMessage, 
-  setReplyingTo, 
-  handleDeleteMessage 
+const MessageItem = memo(({
+  msg,
+  myWireId,
+  isExpanded,
+  replyLineClamp,
+  toggleReplyExpansion,
+  scrollToMessage,
+  setReplyingTo,
+  handleDeleteMessage
 }: {
   msg: WireMessage,
   myWireId: string,
@@ -238,11 +238,10 @@ const MessageItem = memo(({
           </span>
           {msg.replyTo && (
             <div className="flex items-start gap-2 mb-2">
-              <div 
+              <div
                 onClick={() => toggleReplyExpansion(msg.key)}
-                className={`flex-1 pl-2 border-l-2 border-border-color/50 text-text-muted text-[10px] opacity-70 cursor-pointer hover:opacity-100 transition-opacity ${
-                  isExpanded ? 'break-words whitespace-pre-wrap' : ''
-                }`}
+                className={`flex-1 pl-2 border-l-2 border-border-color/50 text-text-muted text-[10px] opacity-70 cursor-pointer hover:opacity-100 transition-opacity ${isExpanded ? 'break-words whitespace-pre-wrap' : ''
+                  }`}
                 style={!isExpanded ? {
                   display: '-webkit-box',
                   WebkitLineClamp: replyLineClamp,
@@ -256,7 +255,7 @@ const MessageItem = memo(({
                 <span className="pointer-events-none"> {formatMessageText(msg.replyTo.text, true)}</span>
               </div>
               {msg.replyTo.key && (
-                <button 
+                <button
                   onClick={() => scrollToMessage(msg.replyTo!.key)}
                   className="shrink-0 text-text-muted/40 hover:text-accent transition-colors pt-0.5"
                   title="Jump to original message"
@@ -279,7 +278,7 @@ const MessageItem = memo(({
         <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pt-0.5">
           {/* Copy Link Button */}
           {!msg.deleted && (
-            <button 
+            <button
               onClick={() => {
                 const url = new URL(window.location.href);
                 url.hash = `msg-${msg.key}`;
@@ -298,7 +297,7 @@ const MessageItem = memo(({
 
           {/* Reply Button */}
           {!msg.deleted && (
-            <button 
+            <button
               onClick={() => setReplyingTo(msg)}
               className="shrink-0 text-text-muted/40 hover:text-accent transition-colors duration-300"
               title="Reply to Signal"
@@ -460,7 +459,7 @@ export default function Home() {
 
   // 1. 初期の臨時（使い捨て）ID生成とキーペア生成
   const initAnonymousIdentity = async () => {
-    
+
     let storedPair = sessionStorage.getItem('wirer_keypair');
     let pair;
     if (storedPair) {
@@ -488,10 +487,14 @@ export default function Home() {
       }
 
       // Gun.jsの初期化 (環境変数でリレー先を切り替え)
-      const relayUrl = process.env.NEXT_PUBLIC_GUN_RELAY || 'http://localhost:8765/gun';
-      const gun = Gun({
-        peers: [relayUrl]
-      });
+      const customRelay = process.env.NEXT_PUBLIC_GUN_RELAY;
+      const peers = customRelay
+        ? [customRelay]
+        : [
+            'https://gun-manhattan.herokuapp.com/gun', // パブリックリレー（β用フォールバック）
+            'http://localhost:8765/gun',               // ローカル開発用
+          ];
+      const gun = Gun({ peers });
       gunRef.current = gun;
 
       // 共通空間の監視
@@ -502,10 +505,10 @@ export default function Home() {
           return;
         }
 
-        if (data && data.text !== undefined && data.sender !== undefined) { 
+        if (data && data.text !== undefined && data.sender !== undefined) {
           // `async` inside `gun.on` is okay for simple updates, but since `SEA.verify` is async, we wrap it
           (async () => {
-            
+
 
             // --- P2P Network Security: Verify Digital Signature ---
             if (!data.pub) return; // 署名がない（古い）メッセージは無視
@@ -535,23 +538,23 @@ export default function Home() {
               }
             }
 
-          const newMsg: WireMessage = {
-            key: key,
-            text: data.text,
-            sender: data.sender,
-            timestamp: data.timestamp,
-            deleted: data.deleted || false,
-            replyTo: data.replyTo ? JSON.parse(data.replyTo) : undefined,
-          };
+            const newMsg: WireMessage = {
+              key: key,
+              text: data.text,
+              sender: data.sender,
+              timestamp: data.timestamp,
+              deleted: data.deleted || false,
+              replyTo: data.replyTo ? JSON.parse(data.replyTo) : undefined,
+            };
 
-          setMessages(prev => {
-            const existingIndex = prev.findIndex(m => m.key === key);
-            if (existingIndex !== -1) {
-              // 既存メッセージの更新（例: 削除フラグの変更）
-              const updated = [...prev];
-              updated[existingIndex] = newMsg;
-              return updated.sort((a, b) => a.timestamp - b.timestamp); // 更新後もソートを維持
-            }
+            setMessages(prev => {
+              const existingIndex = prev.findIndex(m => m.key === key);
+              if (existingIndex !== -1) {
+                // 既存メッセージの更新（例: 削除フラグの変更）
+                const updated = [...prev];
+                updated[existingIndex] = newMsg;
+                return updated.sort((a, b) => a.timestamp - b.timestamp); // 更新後もソートを維持
+              }
               // 新規メッセージの追加
               return [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
             });
@@ -599,7 +602,7 @@ export default function Home() {
     };
 
     // WIRER Logic: デジタル署名を付与（本人が書いた証明）
-    
+
     const sig = await SEA.sign(JSON.stringify(msgData), keyPair);
 
     gunRef.current.get(GUN_ROOT_NODE).get('chat').set({
@@ -620,7 +623,7 @@ export default function Home() {
     if (!email || !password) return;
 
     // 擬似的なログイン：プロトタイプのため簡易的にパスワード等からキーを復元する体で、ローカルから取り出す
-    
+
     let pairStr = localStorage.getItem(`wirer_keypair_${email}`);
     let pair;
     if (pairStr) {
@@ -648,11 +651,11 @@ export default function Home() {
   const handleDeleteMessage = async (messageKey: string) => {
     if (!gunRef.current || !keyPair) return;
     if (window.confirm('このシグナルを削除しますか？（他のユーザーからも見えなくなります）')) {
-      
+
       const deleteData = { deleted: true };
       const sig = await SEA.sign(JSON.stringify(deleteData), keyPair);
 
-      gunRef.current.get(GUN_ROOT_NODE).get('chat').get(messageKey).put({ 
+      gunRef.current.get(GUN_ROOT_NODE).get('chat').get(messageKey).put({
         deleted: true,
         deleteSignature: sig,
         pub: keyPair.pub
@@ -736,7 +739,7 @@ export default function Home() {
           const start = target.selectionStart;
           const end = target.selectionEnd;
           setInputText(inputText.substring(0, start) + '\n' + inputText.substring(end));
-          
+
           // ステート反映後にカーソル位置を調整
           setTimeout(() => {
             target.selectionStart = target.selectionEnd = start + 1;
@@ -885,9 +888,8 @@ export default function Home() {
           <button
             onClick={sendMessage}
             disabled={isMining}
-            className={`w-full py-3 text-text-inverse font-bold uppercase text-xs tracking-widest transition-colors ${
-              isMining ? 'bg-accent cursor-not-allowed animate-pulse' : 'bg-bg-inverse hover:bg-bg-inverse-hover'
-            }`}
+            className={`w-full py-3 text-text-inverse font-bold uppercase text-xs tracking-widest transition-colors ${isMining ? 'bg-accent cursor-not-allowed animate-pulse' : 'bg-bg-inverse hover:bg-bg-inverse-hover'
+              }`}
           >
             {isMining ? 'Computing Proof-of-Work...' : 'Transmit Signal'}
           </button>
@@ -1011,11 +1013,11 @@ export default function Home() {
               {/* Reply Lines Toggle */}
               <div className="flex items-center justify-between pt-2">
                 <span className="uppercase text-text-muted tracking-wider">Reply Lines Preview</span>
-                <input 
-                  type="number" 
-                  min="1" 
-                  max="99" 
-                  value={replyLineClamp} 
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={replyLineClamp}
                   onChange={(e) => {
                     const val = parseInt(e.target.value, 10);
                     if (!isNaN(val) && val > 0) {
