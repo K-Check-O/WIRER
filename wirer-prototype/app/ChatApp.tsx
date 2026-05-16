@@ -1,3 +1,6 @@
+import Gun from 'gun';
+import SEA_module from 'gun/sea';
+const SEA = SEA_module || (typeof window !== \'undefined\' ? (window as any).SEA : undefined) || (Gun as any).SEA;
 'use client';
 
 import { useEffect, useState, useRef, memo } from 'react';
@@ -401,6 +404,7 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [showAuthForm, setShowAuthForm] = useState<boolean>(false);
   const [isMining, setIsMining] = useState<boolean>(false);
+  const [keyPair, setKeyPair] = useState<any>(null);
 
   const debouncedInput = useDebounce(inputText, 300);
 
@@ -453,18 +457,19 @@ export default function Home() {
     };
   };
 
-  // 1. 初期の臨時（使い捨て）ID生成
+  // 1. 初期の臨時（使い捨て）ID生成とキーペア生成
   const initAnonymousIdentity = async () => {
-    // ログインしていない時は、ブラウザごとにランダムなセッションIDを割り振る（Nothingのゲストモード的発想）
-    let sessionId = sessionStorage.getItem('wirer_anonymous_id');
-    if (!sessionId) {
-      const array = new Uint8Array(4);
-      window.crypto.getRandomValues(array);
-      const hex = Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-      sessionId = `GUEST-${hex.slice(0, 4)}-${hex.slice(4, 8)}`;
-      sessionStorage.setItem('wirer_anonymous_id', sessionId);
+    
+    let storedPair = sessionStorage.getItem('wirer_keypair');
+    let pair;
+    if (storedPair) {
+      pair = JSON.parse(storedPair);
+    } else {
+      pair = await SEA.pair();
+      sessionStorage.setItem('wirer_keypair', JSON.stringify(pair));
     }
-    setMyWireId(sessionId);
+    setKeyPair(pair);
+    setMyWireId(`GUEST-${pair.pub.slice(0, 4)}-${pair.pub.slice(4, 8)}`);
   };
 
   // 2. Wasm、Gun.jsの初期化
@@ -482,7 +487,7 @@ export default function Home() {
       }
 
       // Gun.jsの初期化 (ローカル中継基地へ接続)
-      const Gun = (await import('gun' as any)).default;
+      
       const gun = Gun({
         peers: ['http://localhost:8765/gun']
       });
@@ -497,14 +502,37 @@ export default function Home() {
         }
 
         if (data && data.text !== undefined && data.sender !== undefined) { 
-          // --- P2P Network Security: Verify Proof of Work ---
-          if (module) {
-            const isValid = module.ccall('verify_pow', 'number', ['string', 'number', 'number'], [data.text, data.nonce || 0, data.difficulty || 4]);
-            if (isValid !== 1) {
-              console.warn(`[WIRER SECURITY] Invalid PoW detected from ${data.sender}. Message rejected.`);
-              return;
+          // `async` inside `gun.on` is okay for simple updates, but since `SEA.verify` is async, we wrap it
+          (async () => {
+            
+
+            // --- P2P Network Security: Verify Digital Signature ---
+            if (!data.pub) return; // 署名がない（古い）メッセージは無視
+
+            const isDeleteAttempt = data.deleted === true && data.deleteSignature;
+            if (isDeleteAttempt) {
+              const verified = await SEA.verify(data.deleteSignature, data.pub);
+              if (!verified) {
+                console.warn(`[WIRER SECURITY] Invalid Delete Signature from ${data.sender}. Ignored.`);
+                return;
+              }
+            } else {
+              if (!data.signature) return;
+              const verified = await SEA.verify(data.signature, data.pub);
+              if (!verified) {
+                console.warn(`[WIRER SECURITY] Invalid Message Signature from ${data.sender}. Message rejected.`);
+                return;
+              }
             }
-          }
+
+            // --- P2P Network Security: Verify Proof of Work ---
+            if (!data.deleted && module) {
+              const isValid = module.ccall('verify_pow', 'number', ['string', 'number', 'number'], [data.text, data.nonce || 0, data.difficulty || 4]);
+              if (isValid !== 1) {
+                console.warn(`[WIRER SECURITY] Invalid PoW detected from ${data.sender}. Message rejected.`);
+                return;
+              }
+            }
 
           const newMsg: WireMessage = {
             key: key,
@@ -523,9 +551,10 @@ export default function Home() {
               updated[existingIndex] = newMsg;
               return updated.sort((a, b) => a.timestamp - b.timestamp); // 更新後もソートを維持
             }
-            // 新規メッセージの追加
-            return [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
-          });
+              // 新規メッセージの追加
+              return [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
+            });
+          })();
         }
       });
     };
@@ -559,14 +588,24 @@ export default function Home() {
     const difficulty = 4;
     const nonce = await minePoW(inputText, difficulty); // difficulty 4 (少し重い計算)
 
-    gunRef.current.get(GUN_ROOT_NODE).get('chat').set({
+    const msgData = {
       text: inputText,
       nonce: nonce,
       difficulty: difficulty,
-      sender: myWireId,
       timestamp: Date.now(),
       deleted: false,
       replyTo: replyingTo ? JSON.stringify({ key: replyingTo.key, sender: replyingTo.sender, text: replyingTo.text }) : null,
+    };
+
+    // WIRER Logic: デジタル署名を付与（本人が書いた証明）
+    
+    const sig = await SEA.sign(JSON.stringify(msgData), keyPair);
+
+    gunRef.current.get(GUN_ROOT_NODE).get('chat').set({
+      ...msgData,
+      sender: myWireId,
+      pub: keyPair.pub,
+      signature: sig
     });
 
     setInputText('');
@@ -579,13 +618,22 @@ export default function Home() {
     e.preventDefault();
     if (!email || !password) return;
 
-    // 入力された情報からIDを決定論的に計算
-    const identity = await generateIdentityFromCredentials(email, password);
+    // 擬似的なログイン：プロトタイプのため簡易的にパスワード等からキーを復元する体で、ローカルから取り出す
+    
+    let pairStr = localStorage.getItem(`wirer_keypair_${email}`);
+    let pair;
+    if (pairStr) {
+      pair = JSON.parse(pairStr);
+    } else {
+      pair = await SEA.pair();
+      localStorage.setItem(`wirer_keypair_${email}`, JSON.stringify(pair));
+    }
 
-    setMyWireId(identity.wireId);
+    setKeyPair(pair);
+    setMyWireId(`WIRE-${pair.pub.slice(0, 4)}-${pair.pub.slice(4, 8)}`);
     setIsLoggedIn(true);
     setShowAuthForm(false);
-    alert(`アイデンティティ [${identity.wireId}] を復元しました。`);
+    alert(`アイデンティティ [WIRE-${pair.pub.slice(0, 4)}] を復元しました。`);
   };
 
   const handleLogout = () => {
@@ -596,11 +644,18 @@ export default function Home() {
   };
 
   // 🗑️ 個別メッセージの削除（論理削除）
-  const handleDeleteMessage = (messageKey: string) => {
-    if (!gunRef.current) return;
+  const handleDeleteMessage = async (messageKey: string) => {
+    if (!gunRef.current || !keyPair) return;
     if (window.confirm('このシグナルを削除しますか？（他のユーザーからも見えなくなります）')) {
-      // `deleted: true` を書き込むことで論理削除を表現し、全ピアに同期させる
-      gunRef.current.get(GUN_ROOT_NODE).get('chat').get(messageKey).put({ deleted: true });
+      
+      const deleteData = { deleted: true };
+      const sig = await SEA.sign(JSON.stringify(deleteData), keyPair);
+
+      gunRef.current.get(GUN_ROOT_NODE).get('chat').get(messageKey).put({ 
+        deleted: true,
+        deleteSignature: sig,
+        pub: keyPair.pub
+      });
     }
   };
 
