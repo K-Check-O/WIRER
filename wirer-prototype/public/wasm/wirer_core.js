@@ -1593,6 +1593,8 @@ function checkIncomingModuleAPI() {
 
 // Imports from the Wasm binary.
 var _check_signal_integrity = Module['_check_signal_integrity'] = makeInvalidEarlyAccess('_check_signal_integrity');
+var _mine_pow = Module['_mine_pow'] = makeInvalidEarlyAccess('_mine_pow');
+var _verify_pow = Module['_verify_pow'] = makeInvalidEarlyAccess('_verify_pow');
 var _fflush = makeInvalidEarlyAccess('_fflush');
 var _strerror = makeInvalidEarlyAccess('_strerror');
 var _emscripten_stack_init = makeInvalidEarlyAccess('_emscripten_stack_init');
@@ -1608,6 +1610,8 @@ var wasmMemory = makeInvalidEarlyAccess('wasmMemory');
 
 function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['check_signal_integrity'] != 'undefined', 'missing Wasm export: check_signal_integrity');
+  assert(typeof wasmExports['mine_pow'] != 'undefined', 'missing Wasm export: mine_pow');
+  assert(typeof wasmExports['verify_pow'] != 'undefined', 'missing Wasm export: verify_pow');
   assert(typeof wasmExports['fflush'] != 'undefined', 'missing Wasm export: fflush');
   assert(typeof wasmExports['strerror'] != 'undefined', 'missing Wasm export: strerror');
   assert(typeof wasmExports['emscripten_stack_init'] != 'undefined', 'missing Wasm export: emscripten_stack_init');
@@ -1620,6 +1624,8 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['memory'] != 'undefined', 'missing Wasm export: memory');
   assert(typeof wasmExports['__indirect_function_table'] != 'undefined', 'missing Wasm export: __indirect_function_table');
   _check_signal_integrity = Module['_check_signal_integrity'] = createExportWrapper('check_signal_integrity', 1);
+  _mine_pow = Module['_mine_pow'] = createExportWrapper('mine_pow', 2);
+  _verify_pow = Module['_verify_pow'] = createExportWrapper('verify_pow', 3);
   _fflush = createExportWrapper('fflush', 1);
   _strerror = createExportWrapper('strerror', 1);
   _emscripten_stack_init = wasmExports['emscripten_stack_init'];

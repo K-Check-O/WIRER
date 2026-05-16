@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build:wasm": "C:\\Users\\onika\\Documents\\emsdk\\emsdk_env.bat && emcc cpp/core.cpp -o public/wasm/wirer_core.js -s WASM=1 -s \"EXPORTED_FUNCTIONS=['_check_signal_integrity']\" -s \"EXPORTED_RUNTIME_METHODS=['ccall','cwrap']\" -s MODULARIZE=1 -s \"EXPORT_NAME='createWirerCore'\"",
+    "build:wasm": "C:\\Users\\onika\\Documents\\emsdk\\emsdk_env.bat && emcc cpp/core.cpp -o public/wasm/wirer_core.js -s WASM=1 -s \"EXPORTED_FUNCTIONS=['_check_signal_integrity', '_mine_pow', '_verify_pow']\" -s \"EXPORTED_RUNTIME_METHODS=['ccall','cwrap']\" -s MODULARIZE=1 -s \"EXPORT_NAME='createWirerCore'\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
