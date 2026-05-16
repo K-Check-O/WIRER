@@ -1,7 +1,8 @@
+'use client';
+
 import Gun from 'gun';
 import SEA_module from 'gun/sea';
-const SEA = SEA_module || (typeof window !== \'undefined\' ? (window as any).SEA : undefined) || (Gun as any).SEA;
-'use client';
+const SEA = SEA_module || (typeof window !== 'undefined' ? (window as any).SEA : undefined) || (Gun as any).SEA;
 
 import { useEffect, useState, useRef, memo } from 'react';
 import { useDebounce } from './hooks/useDebounce';
