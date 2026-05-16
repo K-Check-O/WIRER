@@ -486,15 +486,11 @@ export default function Home() {
         setWirerModule(module);
       }
 
-      // Gun.jsの初期化 (環境変数でリレー先を切り替え)
-      const customRelay = process.env.NEXT_PUBLIC_GUN_RELAY;
-      const peers = customRelay
-        ? [customRelay]
-        : [
-            'https://gun-manhattan.herokuapp.com/gun', // パブリックリレー（β用フォールバック）
-            'http://localhost:8765/gun',               // ローカル開発用
-          ];
-      const gun = Gun({ peers });
+      // Gun.jsの初期化
+      // 本番: NEXT_PUBLIC_GUN_RELAY に専用リレーURLを設定すること
+      // ローカル: relay.js を起動しておくこと (node relay.js)
+      const relayUrl = process.env.NEXT_PUBLIC_GUN_RELAY || 'http://localhost:8765/gun';
+      const gun = Gun({ peers: [relayUrl] });
       gunRef.current = gun;
 
       // 共通空間の監視
