@@ -1,0 +1,15 @@
+{
+  "name": "wirer-relay",
+  "version": "1.0.0",
+  "description": "WIRER Gun.js P2P relay server",
+  "main": "relay.js",
+  "scripts": {
+    "start": "node relay.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "gun": "^0.2020.1241"
+  }
+}

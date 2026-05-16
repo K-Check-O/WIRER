@@ -1,10 +1,18 @@
 const http = require('http');
 const Gun = require('gun');
 
-// 8765ポートで空のHTTPサーバーを建てる
-const server = http.createServer().listen(8765);
+// Railway/Render等のクラウド環境はPORT環境変数を自動で渡してくる
+const PORT = process.env.PORT || 8765;
 
-// そのサーバーにGun.jsをドッキングする
-const gun = Gun({ web: server });
+const server = http.createServer().listen(PORT, () => {
+  console.log(`⚡ WIRER Relay Server running on port ${PORT}`);
+});
 
-console.log('⚡ WIRER Relay Server running on http://localhost:8765/gun');
+// Gun.jsをHTTPサーバーにドッキング
+const gun = Gun({
+  web: server,
+  // クラウド環境用: メモリ上にのみデータを保持（radata不要）
+  radisk: false,
+});
+
+console.log(`🔗 Gun peer endpoint: http://localhost:${PORT}/gun`);
