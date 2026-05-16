@@ -1,26 +1,56 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* DARK MODE (Default) */
+  --bg-base: #000000;
+  --bg-surface: #09090b;
+  --bg-surface-hover: #18181b;
+  --border-color: #27272a;
+  --border-focus: #ffffff;
+  --text-base: #ffffff;
+  --text-muted: #71717a;
+  --text-inverse: #000000;
+  --bg-inverse: #ffffff;
+  --bg-inverse-hover: #e4e4e7;
+  --accent: #34d399;
+  --status-off: #52525b;
+}
+
+.light {
+  /* LIGHT MODE (warm white, NOTHING OS style) */
+  --bg-base: #f4f4f0;
+  --bg-surface: #eaeaeb;
+  --bg-surface-hover: #dcdcd0;
+  --border-color: #d0d0c8;
+  --border-focus: #111111;
+  --text-base: #111111;
+  --text-muted: #73736b;
+  --text-inverse: #f4f4f0;
+  --bg-inverse: #111111;
+  --bg-inverse-hover: #333333;
+  --accent: #10b981;
+  --status-off: #a1a1aa;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-app-bg: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-surface-hover: var(--bg-surface-hover);
+  --color-border-color: var(--border-color);
+  --color-border-focus: var(--border-focus);
+  --color-text-base: var(--text-base);
+  --color-text-muted: var(--text-muted);
+  --color-text-inverse: var(--text-inverse);
+  --color-bg-inverse: var(--bg-inverse);
+  --color-bg-inverse-hover: var(--bg-inverse-hover);
+  --color-accent: var(--accent);
+  --color-status-off: var(--status-off);
+  --font-dot: var(--font-dot-matrix);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-base);
+  color: var(--text-base);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
