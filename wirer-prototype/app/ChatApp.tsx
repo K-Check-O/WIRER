@@ -487,10 +487,10 @@ export default function Home() {
         setWirerModule(module);
       }
 
-      // Gun.jsの初期化 (ローカル中継基地へ接続)
-      
+      // Gun.jsの初期化 (環境変数でリレー先を切り替え)
+      const relayUrl = process.env.NEXT_PUBLIC_GUN_RELAY || 'http://localhost:8765/gun';
       const gun = Gun({
-        peers: ['http://localhost:8765/gun']
+        peers: [relayUrl]
       });
       gunRef.current = gun;
 
