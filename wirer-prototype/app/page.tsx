@@ -15,11 +15,37 @@ export default function Home() {
   const [wirerModule, setWirerModule] = useState<any>(null);
   const [inputText, setInputText] = useState('');
   const [fontMode, setFontMode] = useState<'default' | 'dot'>('default');
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('dark');
   const [integrity, setIntegrity] = useState<number | null>(null);
   const [messages, setMessages] = useState<WireMessage[]>([]);
   const gunRef = useRef<any>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
+
+  const [isOnline, setIsOnline] = useState(true);
+  const [dotColor, setDotColor] = useState<'red' | 'green'>('red');
+  const [showSettings, setShowSettings] = useState(false);
+  const [showIntegrity, setShowIntegrity] = useState(false);
+  const [selectedMessageKeys, setSelectedMessageKeys] = useState<Set<string>>(new Set());
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+
+  // Initialize theme from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('wirer_theme') as 'light' | 'dark';
+    if (savedTheme) {
+      setThemeMode(savedTheme);
+    }
+  }, []);
+
+  // Apply theme class to document
+  useEffect(() => {
+    if (themeMode === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+    localStorage.setItem('wirer_theme', themeMode);
+  }, [themeMode]);
 
   const handleScroll = () => {
     if (messagesContainerRef.current) {
@@ -223,30 +249,40 @@ export default function Home() {
   };
 
   return (
-    <div className={`flex flex-col min-h-screen bg-black text-white p-6 justify-between ${
+    <div className={`flex flex-col h-screen bg-app-bg text-text-base p-6 transition-colors duration-300 ${
       fontMode === 'dot' ? 'font-dot text-sm' : 'font-sans'
     }`}>
-      <div className="w-full max-w-lg mx-auto space-y-4">
-        <h1 className={`text-4xl font-bold text-center ${fontMode === 'dot' ? 'tracking-tighter' : 'tracking-[0.3em]'}`}>W I R E R</h1>
+      <div className="w-full max-w-lg mx-auto flex flex-col flex-1 min-h-0 space-y-4">
+        <div className="shrink-0 relative flex justify-center items-center">
+          <h1 className={`text-4xl font-bold flex items-center gap-4 ${fontMode === 'dot' ? 'tracking-tighter' : 'tracking-[0.3em]'}`}>
+            W I R E R
+            <span 
+              className={`w-3 h-3 rounded-full animate-pulse ${
+                !isOnline ? 'bg-status-off' : dotColor === 'red' ? 'bg-red-500' : 'bg-green-500'
+              }`}
+              title={isOnline ? "System Online" : "System Offline"}
+            ></span>
+          </h1>
+          <button 
+            onClick={() => setShowSettings(true)}
+            className="absolute right-0 text-[10px] uppercase tracking-widest text-text-muted hover:text-text-base transition-colors"
+          >
+            [ SETTINGS ]
+          </button>
+        </div>
 
         {/* 🔒 アカウント状態モニター */}
-        <div className="border border-zinc-800 p-3 bg-zinc-950 flex justify-between items-center text-xs">
+        <div className="shrink-0 border border-border-color p-3 bg-surface flex justify-between items-center text-xs transition-colors duration-300">
           <div className="flex items-center gap-4">
-            <span className={`w-2 h-2 rounded-full ${isLoggedIn ? 'bg-emerald-500' : 'bg-zinc-600'}`}></span>
-            <span className="text-zinc-500 uppercase tracking-widest text-[10px]">
+            <span className={`w-2 h-2 rounded-full ${isLoggedIn ? 'bg-accent' : 'bg-status-off'}`}></span>
+            <span className="text-text-muted uppercase tracking-widest text-[10px]">
               {isLoggedIn ? 'Secured Identity' : 'Guest Mode'}
             </span>
           </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setFontMode(fontMode === 'default' ? 'dot' : 'default')}
-              className="text-zinc-400 hover:text-white underline text-[10px] uppercase"
-            >
-              {fontMode === 'default' ? 'DOT-MATRIX' : 'DEFAULT FONT'}
-            </button>
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => isLoggedIn ? handleLogout() : setShowAuthForm(!showAuthForm)}
-              className="text-zinc-400 hover:text-white underline text-[10px] uppercase"
+              className="text-text-muted hover:text-text-base underline text-[10px] uppercase transition-colors"
             >
               {isLoggedIn ? 'Disconnect' : showAuthForm ? 'Close' : 'Sync Account'}
             </button>
@@ -255,35 +291,35 @@ export default function Home() {
 
         {/* 🔐 ログインフォームエリア */}
         {showAuthForm && !isLoggedIn && (
-          <form onSubmit={handleWeb3Login} className="border border-zinc-800 p-4 bg-zinc-950 text-xs space-y-3 animate-fade-in">
-            <p className="text-[9px] text-zinc-500 uppercase tracking-wider">
+          <form onSubmit={handleWeb3Login} className="shrink-0 border border-border-color p-4 bg-surface text-xs space-y-3 animate-fade-in transition-colors duration-300">
+            <p className="text-[9px] text-text-muted uppercase tracking-wider">
               ※サーバーへの登録はありません。手元での暗号計算によってIDを復元します。
             </p>
             <div className="space-y-1">
-              <label className="text-zinc-500 uppercase text-[9px]">Email</label>
+              <label className="text-text-muted uppercase text-[9px]">Email</label>
               <input 
                 type="email" 
                 required
                 placeholder="example@wire.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 p-2 text-white focus:outline-none focus:border-zinc-500"
+                className="w-full bg-surface-hover border border-border-color p-2 text-text-base focus:outline-none focus:border-text-muted transition-colors"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-zinc-500 uppercase text-[9px]">Password</label>
+              <label className="text-text-muted uppercase text-[9px]">Password</label>
               <input 
                 type="password" 
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 p-2 text-white focus:outline-none focus:border-zinc-500"
+                className="w-full bg-surface-hover border border-border-color p-2 text-text-base focus:outline-none focus:border-text-muted transition-colors"
               />
             </div>
             <button 
               type="submit"
-              className="w-full py-2 bg-white text-black font-bold uppercase text-[10px] tracking-widest"
+              className="w-full py-2 bg-bg-inverse text-text-inverse font-bold uppercase text-[10px] tracking-widest hover:bg-bg-inverse-hover transition-colors"
             >
               Secure Sync
             </button>
@@ -291,52 +327,76 @@ export default function Home() {
         )}
 
         {/* 🆔 現在のWire ID表示 */}
-        <div className="text-right text-[10px] text-zinc-500 tracking-widest">
-          ID: <span className="text-zinc-300 font-bold">{myWireId}</span>
+        <div className="shrink-0 text-right text-[10px] text-text-muted tracking-widest">
+          ID: <span className="text-text-base font-bold">{myWireId}</span>
         </div>
 
         {/* 受信メッセージの表示エリア */}
         <div 
           ref={messagesContainerRef}
           onScroll={handleScroll}
-          className="border border-zinc-800 p-4 h-52 overflow-y-auto space-y-3 bg-zinc-900/10"
+          className="flex-1 min-h-0 border border-border-color p-4 overflow-y-auto space-y-3 bg-surface transition-colors duration-300 scrollbar-thin"
         >
-          <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-1">Incoming Wires</p>
-          {messages.map((msg) => (
-            <div key={msg.key} className="text-sm p-2 border-l border-zinc-700 bg-zinc-900/30 group relative">
-              <div className="flex justify-between items-start">
-                <div>
-                  <span className={`text-[9px] block uppercase tracking-wider mb-1 ${
-                    msg.sender === myWireId ? 'text-emerald-400' : msg.sender.startsWith('GUEST') ? 'text-zinc-600' : 'text-zinc-400'
-                  }`}>
-                    {msg.sender === myWireId ? 'You' : msg.sender}
-                  </span>
-                  {msg.deleted ? (
-                    <span className="text-zinc-500 italic">[ signal deleted ]</span>
-                  ) : (
-                    <span className="text-zinc-200">{msg.text}</span>
+          <p className="text-[10px] text-text-muted uppercase tracking-widest mb-1">Incoming Wires</p>
+          {messages.map((msg) => {
+            let statusColorClass = 'border-border-color';
+            let senderColorClass = 'text-text-muted';
+            
+            if (msg.sender === myWireId) {
+              statusColorClass = 'border-accent';
+              senderColorClass = 'text-accent';
+            } else if (msg.sender.startsWith('GUEST')) {
+              statusColorClass = 'border-status-off';
+              senderColorClass = 'text-status-off';
+            } else if (msg.sender.startsWith('WIRE')) {
+              statusColorClass = 'border-text-base';
+              senderColorClass = 'text-text-base';
+            }
+
+            return (
+              <div key={msg.key} className={`text-sm p-2 border-l-2 ${statusColorClass} bg-surface-hover group relative transition-colors duration-300`}>
+                <div className="flex justify-between items-start gap-4">
+                  <div className="min-w-0 flex-1">
+                    <span className={`text-[9px] block uppercase tracking-wider mb-1 ${senderColorClass}`}>
+                      {msg.sender === myWireId ? 'You' : msg.sender}
+                    </span>
+                    {msg.deleted ? (
+                      <span className="text-text-muted italic">[ signal deleted ]</span>
+                    ) : (
+                      <span className="text-text-base break-words whitespace-pre-wrap block">{msg.text}</span>
+                    )}
+                  </div>
+                  {msg.sender === myWireId && !msg.deleted && (
+                    <button 
+                      onClick={() => handleDeleteMessage(msg.key)} 
+                      className="shrink-0 text-text-muted/40 hover:text-red-500 transition-colors duration-300 pt-0.5"
+                      title="Delete Signal"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                    </button>
                   )}
                 </div>
-                {msg.sender === myWireId && !msg.deleted && (
-                  <button onClick={() => handleDeleteMessage(msg.key)} className="text-red-500/50 text-[9px] uppercase hover:text-red-500 hover:underline opacity-0 group-hover:opacity-100 transition-opacity">
-                    Delete
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* 信号モニター */}
-        <div className="border border-zinc-800 p-4 bg-zinc-900/30 text-center relative">
-          <span className="text-[10px] text-zinc-500 absolute top-2 left-4">INTEGRITY</span>
-          <div className="text-3xl font-bold mt-1">{integrity !== null ? `${integrity}%` : '--%'}</div>
-        </div>
+        {/* 信号モニター (Debug) */}
+        {showIntegrity && (
+          <div className="shrink-0 border border-border-color p-4 bg-surface-hover text-center relative transition-colors duration-300 animate-fade-in">
+            <span className="text-[10px] text-text-muted absolute top-2 left-4">INTEGRITY</span>
+            <div className="text-3xl font-bold mt-1">{integrity !== null ? `${integrity}%` : '--%'}</div>
+          </div>
+        )}
 
         {/* 入力と送信 */}
-        <div className="space-y-4">
+        <div className="shrink-0 space-y-4">
           <textarea
-            className={`w-full h-20 bg-transparent border border-zinc-800 p-4 focus:outline-none focus:border-white transition-colors resize-none ${
+            className={`w-full h-20 bg-transparent border border-border-color p-4 focus:outline-none focus:border-border-focus transition-colors resize-none ${
               fontMode === 'dot' ? 'text-sm' : 'text-base'
             }`}
             placeholder="Type a wire..."
@@ -345,12 +405,119 @@ export default function Home() {
           />
           <button 
             onClick={sendMessage}
-            className="w-full py-3 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-zinc-200 transition-colors"
+            className="w-full py-3 bg-bg-inverse text-text-inverse font-bold uppercase text-xs tracking-widest hover:bg-bg-inverse-hover transition-colors"
           >
             Transmit Signal
           </button>
         </div>
       </div>
+
+      {/* Settings Modal (Overlay) */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className={`w-full max-w-sm border border-border-color bg-app-bg shadow-2xl p-6 relative flex flex-col space-y-6 ${
+            fontMode === 'dot' ? 'font-dot' : 'font-sans'
+          }`}>
+            <button 
+              onClick={() => setShowSettings(false)}
+              className="absolute top-4 right-4 text-text-muted hover:text-text-base transition-colors"
+              aria-label="Close settings"
+            >
+              ✕
+            </button>
+            
+            <h2 className="text-sm font-bold uppercase tracking-widest text-text-base border-b border-border-color pb-2">
+              System Settings
+            </h2>
+            
+            <div className="space-y-4 text-xs">
+              {/* Dot Color Toggle */}
+              <div className="flex items-center justify-between">
+                <span className="uppercase text-text-muted tracking-wider">Status Dot Color</span>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setDotColor('red')}
+                    className={`w-8 h-8 flex items-center justify-center rounded border transition-colors ${
+                      dotColor === 'red' ? 'border-red-500 bg-red-500/10' : 'border-border-color hover:border-red-500/50'
+                    }`}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></div>
+                  </button>
+                  <button 
+                    onClick={() => setDotColor('green')}
+                    className={`w-8 h-8 flex items-center justify-center rounded border transition-colors ${
+                      dotColor === 'green' ? 'border-green-500 bg-green-500/10' : 'border-border-color hover:border-green-500/50'
+                    }`}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Theme Toggle */}
+              <div className="flex items-center justify-between pt-2">
+                <span className="uppercase text-text-muted tracking-wider">Theme Mode</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[9px] uppercase tracking-widest ${themeMode === 'dark' ? 'text-text-base font-bold' : 'text-text-muted'}`}>Dark</span>
+                  <button
+                    onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
+                    className={`w-8 h-4 rounded-full relative transition-colors ${themeMode === 'light' ? 'bg-bg-inverse' : 'bg-surface-hover border border-border-color'}`}
+                  >
+                    <div className={`w-3 h-3 rounded-full ${themeMode === 'light' ? 'bg-text-inverse' : 'bg-text-base'} absolute top-0.5 transition-all ${themeMode === 'light' ? 'left-4' : 'left-0.5'}`} />
+                  </button>
+                  <span className={`text-[9px] uppercase tracking-widest ${themeMode === 'light' ? 'text-text-base font-bold' : 'text-text-muted'}`}>Light</span>
+                </div>
+              </div>
+
+              {/* Font Toggle */}
+              <div className="flex items-center justify-between pt-2">
+                <span className="uppercase text-text-muted tracking-wider">Font Style</span>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setFontMode('default')}
+                    className={`px-3 py-1 text-[10px] uppercase tracking-widest rounded border transition-colors ${
+                      fontMode === 'default' ? 'border-text-base text-text-base bg-surface-hover' : 'border-border-color text-text-muted hover:border-text-muted'
+                    }`}
+                  >
+                    Standard
+                  </button>
+                  <button 
+                    onClick={() => setFontMode('dot')}
+                    className={`px-3 py-1 text-[10px] uppercase tracking-widest rounded border transition-colors ${
+                      fontMode === 'dot' ? 'border-text-base text-text-base bg-surface-hover' : 'border-border-color text-text-muted hover:border-text-muted'
+                    }`}
+                  >
+                    Dot-Matrix
+                  </button>
+                </div>
+              </div>
+
+              {/* Integrity Monitor Toggle */}
+              <div className="flex items-center justify-between pt-2">
+                <span className="uppercase text-text-muted tracking-wider">Show Integrity Monitor</span>
+                <button
+                  onClick={() => setShowIntegrity(!showIntegrity)}
+                  className={`w-8 h-4 rounded-full relative transition-colors ${showIntegrity ? 'bg-text-base' : 'bg-surface-hover border border-border-color'}`}
+                >
+                  <div className={`w-3 h-3 rounded-full bg-app-bg absolute top-0.5 transition-all ${showIntegrity ? 'left-4' : 'left-0.5'}`} />
+                </button>
+              </div>
+
+              {/* Offline Test Toggle (For visual demonstration) */}
+              <div className="flex items-center justify-between pt-2">
+                <span className="uppercase text-text-muted tracking-wider">Force Offline Mode</span>
+                <button
+                  onClick={() => setIsOnline(!isOnline)}
+                  className={`w-8 h-4 rounded-full relative transition-colors ${!isOnline ? 'bg-text-base' : 'bg-surface-hover border border-border-color'}`}
+                >
+                  <div className={`w-3 h-3 rounded-full bg-app-bg absolute top-0.5 transition-all ${!isOnline ? 'left-4' : 'left-0.5'}`} />
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
