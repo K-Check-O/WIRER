@@ -71,13 +71,13 @@ const LinkPreview = ({ url }: { url: string }) => {
 const formatMessageText = (text: string, isPreview: boolean = false) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
-  
+
   return parts.map((part, index) => {
     if (part.match(urlRegex)) {
       try {
         const url = new URL(part);
         const displayDomain = url.hostname.replace(/^www\./, '');
-        
+
         if (isPreview) {
           return <span key={index} className="text-accent underline pointer-events-none">[{displayDomain}]</span>;
         }
@@ -103,6 +103,26 @@ const formatMessageText = (text: string, isPreview: boolean = false) => {
           );
         }
 
+        // NicoNico Douga Detection
+        // サーバーサイドプロキシ経由で埋め込み（fetch/XHRをインターセプト + CSP除去）
+        const nicoRegExp = /nicovideo\.jp\/watch\/([a-zA-Z0-9]+)/;
+        const nicoMatch = part.match(nicoRegExp);
+        if (nicoMatch) {
+          embedElement = (
+            <div className="mt-2 w-full max-w-[400px] aspect-video border border-border-color bg-app-bg overflow-hidden">
+              <iframe
+                src={`/api/nico-proxy?id=${nicoMatch[1]}`}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allow="autoplay; fullscreen; picture-in-picture; storage-access"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-storage-access-by-user-activation"
+                allowFullScreen
+              ></iframe>
+            </div>
+          );
+        }
+
         // Spotify Detection
         const spotifyRegExp = /open\.spotify\.com\/(track|album|playlist|episode|artist)\/([a-zA-Z0-9]+)/;
         const spMatch = part.match(spotifyRegExp);
@@ -110,12 +130,12 @@ const formatMessageText = (text: string, isPreview: boolean = false) => {
           const height = spMatch[1] === 'track' ? "152" : "352";
           embedElement = (
             <div className="mt-2 w-full max-w-[400px] border border-border-color bg-app-bg">
-              <iframe 
-                src={`https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}?theme=0`} 
-                width="100%" 
-                height={height} 
-                frameBorder="0" 
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+              <iframe
+                src={`https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}?theme=0`}
+                width="100%"
+                height={height}
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 loading="lazy"
               ></iframe>
             </div>
@@ -172,9 +192,9 @@ const formatMessageText = (text: string, isPreview: boolean = false) => {
 
         return (
           <span key={index}>
-            <a 
-              href={part} 
-              target="_blank" 
+            <a
+              href={part}
+              target="_blank"
               rel="noopener noreferrer"
               className="text-accent underline hover:brightness-125 transition-all"
               title={part}
@@ -192,15 +212,15 @@ const formatMessageText = (text: string, isPreview: boolean = false) => {
   });
 };
 
-const MessageItem = memo(({ 
-  msg, 
-  myWireId, 
-  isExpanded, 
-  replyLineClamp, 
-  toggleReplyExpansion, 
-  scrollToMessage, 
-  setReplyingTo, 
-  handleDeleteMessage 
+const MessageItem = memo(({
+  msg,
+  myWireId,
+  isExpanded,
+  replyLineClamp,
+  toggleReplyExpansion,
+  scrollToMessage,
+  setReplyingTo,
+  handleDeleteMessage
 }: {
   msg: WireMessage,
   myWireId: string,
@@ -234,11 +254,10 @@ const MessageItem = memo(({
           </span>
           {msg.replyTo && (
             <div className="flex items-start gap-2 mb-2">
-              <div 
+              <div
                 onClick={() => toggleReplyExpansion(msg.key)}
-                className={`flex-1 pl-2 border-l-2 border-border-color/50 text-text-muted text-[10px] opacity-70 cursor-pointer hover:opacity-100 transition-opacity ${
-                  isExpanded ? 'break-words whitespace-pre-wrap' : ''
-                }`}
+                className={`flex-1 pl-2 border-l-2 border-border-color/50 text-text-muted text-[10px] opacity-70 cursor-pointer hover:opacity-100 transition-opacity ${isExpanded ? 'break-words whitespace-pre-wrap' : ''
+                  }`}
                 style={!isExpanded ? {
                   display: '-webkit-box',
                   WebkitLineClamp: replyLineClamp,
@@ -252,7 +271,7 @@ const MessageItem = memo(({
                 <span className="pointer-events-none"> {formatMessageText(msg.replyTo.text, true)}</span>
               </div>
               {msg.replyTo.key && (
-                <button 
+                <button
                   onClick={() => scrollToMessage(msg.replyTo!.key)}
                   className="shrink-0 text-text-muted/40 hover:text-accent transition-colors pt-0.5"
                   title="Jump to original message"
@@ -275,7 +294,7 @@ const MessageItem = memo(({
         <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pt-0.5">
           {/* Copy Link Button */}
           {!msg.deleted && (
-            <button 
+            <button
               onClick={() => {
                 const url = new URL(window.location.href);
                 url.hash = `msg-${msg.key}`;
@@ -294,7 +313,7 @@ const MessageItem = memo(({
 
           {/* Reply Button */}
           {!msg.deleted && (
-            <button 
+            <button
               onClick={() => setReplyingTo(msg)}
               className="shrink-0 text-text-muted/40 hover:text-accent transition-colors duration-300"
               title="Reply to Signal"
@@ -483,8 +502,9 @@ export default function Home() {
 
       // Gun.jsの初期化 (ローカル中継基地へ接続)
       const Gun = (await import('gun' as any)).default;
+      const relayUrl = process.env.NEXT_PUBLIC_GUN_RELAY || 'http://localhost:8765/gun';
       const gun = Gun({
-        peers: ['http://localhost:8765/gun']
+        peers: [relayUrl]
       });
       gunRef.current = gun;
 
@@ -496,7 +516,7 @@ export default function Home() {
           return;
         }
 
-        if (data && data.text !== undefined && data.sender !== undefined) { 
+        if (data && data.text !== undefined && data.sender !== undefined) {
           // --- P2P Network Security: Verify Proof of Work ---
           if (module) {
             const isValid = module.ccall('verify_pow', 'number', ['string', 'number', 'number'], [data.text, data.nonce || 0, data.difficulty || 4]);
@@ -680,7 +700,7 @@ export default function Home() {
           const start = target.selectionStart;
           const end = target.selectionEnd;
           setInputText(inputText.substring(0, start) + '\n' + inputText.substring(end));
-          
+
           // ステート反映後にカーソル位置を調整
           setTimeout(() => {
             target.selectionStart = target.selectionEnd = start + 1;
@@ -829,9 +849,8 @@ export default function Home() {
           <button
             onClick={sendMessage}
             disabled={isMining}
-            className={`w-full py-3 text-text-inverse font-bold uppercase text-xs tracking-widest transition-colors ${
-              isMining ? 'bg-accent cursor-not-allowed animate-pulse' : 'bg-bg-inverse hover:bg-bg-inverse-hover'
-            }`}
+            className={`w-full py-3 text-text-inverse font-bold uppercase text-xs tracking-widest transition-colors ${isMining ? 'bg-accent cursor-not-allowed animate-pulse' : 'bg-bg-inverse hover:bg-bg-inverse-hover'
+              }`}
           >
             {isMining ? 'Computing Proof-of-Work...' : 'Transmit Signal'}
           </button>
@@ -955,11 +974,11 @@ export default function Home() {
               {/* Reply Lines Toggle */}
               <div className="flex items-center justify-between pt-2">
                 <span className="uppercase text-text-muted tracking-wider">Reply Lines Preview</span>
-                <input 
-                  type="number" 
-                  min="1" 
-                  max="99" 
-                  value={replyLineClamp} 
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={replyLineClamp}
                   onChange={(e) => {
                     const val = parseInt(e.target.value, 10);
                     if (!isNaN(val) && val > 0) {
